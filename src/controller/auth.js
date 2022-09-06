@@ -51,8 +51,8 @@ const login = async (req, res) => {
     //Get user Roles
     const roles = Object.values(user.roles).filter(Boolean)
     //Generate Token
-    const acessToken = createToken({ userName, roles }, '120s')
-    const refreshToken = createToken({ userName }, '1d')
+    const acessToken = createToken({ userName, roles }, '60s')
+    const refreshToken = createToken({ userName }, '30s')
 
     //Save the refres token to the user
     user.refreshToken = refreshToken;
@@ -70,24 +70,28 @@ const login = async (req, res) => {
 }
 
 const handleRefreshToken = async (req, res) => {
+
     const refreshToken = req.cookies.jwt
     if (!refreshToken) {
         throw new UnAuthorizedError('Token is not present')
     }
     console.log(refreshToken);
 
-    const foundUser = await UserModel.find({ refreshToken })
+    const foundUser = await UserModel.findOne({ refreshToken })
 
     if (!foundUser) {
         return res.status(403).json({ message: 'forbidden' })
     }
 
     jwt.verify(refreshToken, process.env.JWT_SECRET, (err, decoded) => {
+
         if (err || foundUser.userName !== decoded.userName) {
             return res.status(403).json({ message: 'forbidden' })
         }
-        const roles = Object.values(user.roles).filter(Boolean)
+
+        const roles = Object.values(foundUser.roles).filter(Boolean)
         //Generate Token
+
         const acessToken = createToken({ userName: decoded.userName, roles }, '120s')
         res.status(200).json({
             acessToken,
@@ -97,6 +101,7 @@ const handleRefreshToken = async (req, res) => {
 }
 
 const logout = async (req, res) => {
+
     // On client , delete the access token
     const refreshToken = req.cookies.jwt
     if (!refreshToken) {
